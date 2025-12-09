@@ -42,8 +42,9 @@ pkse/
 │   ├── index.rs     # Inverted index logic
 │   ├── watcher.rs   # Folder watcher logic
 │   └── search.rs    # CLI and HTTP search functions
-├── notes/           # Your markdown and text files
+│   └── ingestion.rs # Everything related to loading files
 └── Cargo.toml       # Cargo configuration
+└── README.md        # Repo readme/info file
 ```
 
 ---
