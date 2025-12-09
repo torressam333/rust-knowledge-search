@@ -11,7 +11,6 @@ struct Document {
 
 #[derive(Debug)]
 pub enum IngestError {
-    IoError(std::io::Error),
-    InvalidData(String),
-    NotDirectory(PathBuf),
+    NotDirectory,
+    Io(std::io::Error), // Wrapping std::io::Error allows us to keep the full error history and can show the user what exactly went wrong
 }
