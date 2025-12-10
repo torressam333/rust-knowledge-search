@@ -59,3 +59,22 @@ pub fn load_documents(dir: &Path) -> Result<Vec<Document>, IngestError> {
     Ok(docs)
 }
 
+#[cfg(test)]
+mod tests {
+  use super::*; // Bring everything from the outer module into scope for testing
+  use std::fs;
+  use std::env;
+  use std::path::Path;
+
+  fn make_temp_dir(name: &str) -> std::path::PathBuf {
+    let mut temp = std::env::temp_dir();
+    temp.push(name);
+
+    std::fs::create_dir_all(&temp).unwrap();
+
+    temp
+  }
+
+  #[test]
+   fn test_load_documents_builtin() {}
+}
