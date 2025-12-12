@@ -1,3 +1,4 @@
+use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 use thiserror::Error;
@@ -27,29 +28,41 @@ pub fn load_documents(dir: &Path) -> Result<Vec<Document>, IngestError> {
     }
 
     // 2. Read directory entries
-    let entries = std::fs::read_dir(dir).map_err(IngestError::Io)?;
+    // Before: std::fs::read_dir(dir).map_err(IngestError::Io)?
+    // Now: the `?` will convert `std::io::Error` -> `IngestError` via `From attribute
+    let entries = std::fs::read_dir(dir)?;
 
     let mut docs = Vec::new();
 
     // 3. Process each entry
     for entry_result in entries {
-        let entry = entry_result.map_err(IngestError::Io)?;
+        let entry = entry_result?;
         let path = entry.path();
 
+        // Skip things that aren't files (avoid indexing directories)
+        // Use file_type() to avoid a second metadata syscall in some systems.
+        if !entry.file_type()?.is_file() {
+            continue;
+        }
+
         // 4. Only allow .md or .txt files
-        let ext = path.extension().and_then(|e| e.to_str());
-        let is_text = matches!(ext, Some("md") | Some("txt"));
+        let is_text = matches!(
+            path.extension().and_then(|e| e.to_str()),
+            Some("md" | "txt")
+        );
+
         if !is_text {
             continue;
         }
 
-        // 5. Read the file contents
-        let content = std::fs::read_to_string(&path).map_err(IngestError::Io)?;
+        // 5. Read the file contents (propagates io::Error -> IngestError::Io)
+        let content = read_to_string(&path)?;
 
-        // 6. Get modified time (optional)
-        let modified = entry.metadata().and_then(|m| m.modified()).ok();
+        // 6. Get modified time
+        // Ignore metadata errors and dont fail the whole load:
+        let modified = entry.metadata().ok().and_then(|m| m.modified().ok());
 
-        // 7. Build the Document
+        // 7. Build the document
         docs.push(Document {
             id: Uuid::new_v4(),
             path,
