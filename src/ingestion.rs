@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
+use thiserror::Error;
 use uuid::Uuid;
 #[derive(Debug)]
 pub struct Document {
@@ -9,10 +10,14 @@ pub struct Document {
     modified: Option<SystemTime>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum IngestError {
+    #[error("path is not a directory")]
     NotDirectory,
-    Io(std::io::Error), // Wrapping std::io::Error allows us to keep the full error history and can show the user what exactly went wrong
+    /// Wrap any underlying I/O error. `#[from]` creates `From<std::io::Error>`,
+    /// which lets `?` convert `std::io::Error` -> `IngestError::Io(...)` automatically.
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
 }
 
 pub fn load_documents(dir: &Path) -> Result<Vec<Document>, IngestError> {
