@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 use uuid::Uuid;
-
+#[derive(Debug)]
 pub struct Document {
     id: Uuid,
     path: PathBuf,
@@ -59,13 +59,17 @@ pub fn load_documents(dir: &Path) -> Result<Vec<Document>, IngestError> {
 #[cfg(test)]
 mod tests {
     use super::*; // Bring everything from the outer module into scope for testing
-    use std::env;
     use std::fs;
-    use std::path::Path;
 
     fn make_temp_dir(name: &str) -> std::path::PathBuf {
         let mut temp = std::env::temp_dir();
-        temp.push(name);
+        let unique_name = format!("{}_{}", name, Uuid::new_v4());
+
+        temp.push(unique_name);
+
+        if temp.exists() {
+            std::fs::remove_dir_all(&temp).unwrap();
+        }
 
         std::fs::create_dir_all(&temp).unwrap();
 
@@ -101,5 +105,22 @@ mod tests {
             docs.iter()
                 .any(|doc| doc.content == "Some markdown content")
         );
+    }
+
+    // Test the error case (NotDirectory)
+    #[test]
+    fn test_not_directory_builtin() {
+        let dir_path = make_temp_dir("rust_test_notes");
+
+        // Create a file instead of directory
+        let tmp_file = dir_path.join("not_a_dir.txt");
+        fs::write(&tmp_file, "oops").unwrap();
+
+        // Call loader, expect error
+        let err = load_documents(&tmp_file).unwrap_err();
+        match err {
+            IngestError::NotDirectory => (), // expected
+            _ => panic!("Expected NotDirectory"),
+        }
     }
 }
