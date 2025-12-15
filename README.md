@@ -41,6 +41,7 @@ pkse/
 │   ├── main.rs      # Entry point
 │   ├── index.rs     # Inverted index logic
 │   ├── watcher.rs   # Folder watcher logic
+│   ├── tokenizer.rs # Used for indexing search terms
 │   └── search.rs    # CLI and HTTP search functions
 │   └── ingestion.rs # Everything related to loading files
 └── Cargo.toml       # Cargo configuration
@@ -84,12 +85,13 @@ GET http://localhost:3000/search?q=your+query
 
 ## Contribution and Learning
 
-This project is meant for **learning Rust hands-on**. You are encouraged to:
+This project is meant for me to **learning Rust hands-on**.
+In the process of building this project I:
 
 * Read Rust documentation and examples
-* Experiment with the code
-* Only ask AI for guidance, not full solutions
-* Add tests and improve modularity
+* Experimented with the code
+* Only ask AI for guidance, never for full solutions
+* Added tests and improve modularity iteratively to create a "rough" draft then ask AI to review my code and leave feedback as if it were a PR with the intention of making each file production quality.
 
 ---
 
