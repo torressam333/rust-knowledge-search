@@ -31,4 +31,23 @@ mod tests {
         let index = Index::new();
         assert!(index.postings.is_empty());
     }
+
+    fn add_single_document_indexes_tokens() {
+        let mut index = Index::new();
+
+        let doc = Document {
+            id: Uuid::new_v4(),
+            path: PathBuf::from("note.txt"),
+            content: "Hello world".to_string(),
+            modified: None,
+        };
+
+        index.add_document(&doc);
+
+        assert!(index.postings.contains_key("hello"));
+        assert!(index.postings.contains_key("world"));
+
+        assert_eq!(index.postings["hello"], vec![doc.id]);
+        assert_eq!(index.postings["world"], vec![doc.id]);
+    }
 }

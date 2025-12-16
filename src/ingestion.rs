@@ -3,12 +3,14 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 use thiserror::Error;
 use uuid::Uuid;
+
+// TODO: Making fields pub for now...will add getters leter to make more robust.
 #[derive(Debug)]
 pub struct Document {
-    id: Uuid,
-    path: PathBuf,
-    content: String,
-    modified: Option<SystemTime>,
+    pub id: Uuid,
+    pub path: PathBuf,
+    pub content: String,
+    pub modified: Option<SystemTime>,
 }
 
 #[derive(Debug, Error)]
