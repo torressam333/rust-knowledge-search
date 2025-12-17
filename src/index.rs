@@ -24,6 +24,13 @@ impl Index {
         for token in tokens {
             unique_tokens.insert(token);
         }
+
+        for token in unique_tokens {
+            self.postings
+                .entry(token)
+                .or_insert_with(Vec::new)
+                .push(doc.id);
+        }
     }
 }
 
