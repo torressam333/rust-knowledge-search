@@ -11,7 +11,7 @@ pub fn tokenize(text: &str) -> Vec<String> {
             cleaned.push(ch);
         } else {
             // 4. Otherwise replace punctuation with white space
-            cleaned.push(' '); // replace punctuation
+            cleaned.push(' '); // replace punctuation or non ascii chars
         }
     }
 

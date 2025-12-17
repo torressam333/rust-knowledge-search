@@ -1,6 +1,7 @@
 use crate::ingestion::Document;
 use crate::tokenizer::tokenize;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use uuid::Uuid;
 
 pub struct Index {
@@ -15,7 +16,14 @@ impl Index {
     }
 
     pub fn add_document(&mut self, doc: &Document) {
-        todo!()
+        let tokens = tokenize(&doc.content);
+
+        // Prevent dupe doc id's per token
+        let mut unique_tokens = HashSet::new();
+
+        for token in tokens {
+            unique_tokens.insert(token);
+        }
     }
 }
 
