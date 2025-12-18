@@ -5,6 +5,8 @@ mod tokenizer;
 mod watcher;
 use clap::{Parser, Subcommand};
 
+use crate::tokenizer::tokenize;
+
 #[derive(Parser, Debug)]
 #[command(name = "rust-search")]
 #[command(about = "Search indexed documents", long_about = None)]
@@ -30,7 +32,13 @@ fn main() {
 
     match cli.command {
         Commands::Search { query } => {
-            println!("Searching for: {}", query);
+            run_search(query);
         }
     }
+}
+
+fn run_search(query: String) {
+    let tokens = tokenize(&query);
+
+    println!("tokens from query ={:#?}", tokens);
 }
