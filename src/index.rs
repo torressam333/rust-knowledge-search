@@ -47,6 +47,7 @@ mod tests {
         assert!(index.postings.is_empty());
     }
 
+    #[test]
     fn add_single_document_indexes_tokens() {
         let mut index = Index::new();
 
@@ -64,5 +65,32 @@ mod tests {
 
         assert_eq!(index.postings["hello"], vec![doc.id]);
         assert_eq!(index.postings["world"], vec![doc.id]);
+    }
+
+    #[test]
+    fn add_two_docs() {
+        let mut index = Index::new();
+
+        let doc = Document {
+            id: Uuid::new_v4(),
+            path: PathBuf::from("note.txt"),
+            content: "Hello world".to_string(),
+            modified: None,
+        };
+
+        let doc2 = Document {
+            id: Uuid::new_v4(),
+            path: PathBuf::from("note.txt"),
+            content: "Hello world how are you friend?".to_string(),
+            modified: None,
+        };
+
+        index.add_document(&doc);
+        index.add_document(&doc2);
+
+        assert!(index.postings.contains_key("hello"));
+        assert!(index.postings.contains_key("world"));
+        assert_eq!(index.postings["hello"], vec![doc.id, doc2.id]);
+        assert_eq!(index.postings["friend"], vec![doc2.id]);
     }
 }
