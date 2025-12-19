@@ -115,4 +115,27 @@ mod tests {
         assert_eq!(index.postings["hello"], vec![doc.id, doc2.id]);
         assert_eq!(index.postings["friend"], vec![doc2.id]);
     }
+
+    #[test]
+    fn search_empty_query_returns_empty_vec() {
+        let index = Index::new();
+        let query = "";
+
+        let search_results = index.search_query(&query);
+        let empty_vec: Vec<Uuid> = Vec::new();
+
+        assert_eq!(search_results, empty_vec);
+    }
+
+    #[test]
+    fn search_single_token_returns_matching_doc() {}
+
+    #[test]
+    fn search_multiple_tokens_returns_union_of_docs() {}
+
+    #[test]
+    fn search_unknown_token_returns_empty_vec() {}
+
+    #[test]
+    fn search_does_not_duplicate_document_ids() {}
 }
