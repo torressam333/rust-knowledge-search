@@ -32,6 +32,28 @@ impl Index {
                 .push(doc.id);
         }
     }
+
+    pub fn search_query(&self, query: &str) -> Vec<Uuid> {
+        // 1. Tokenize the query
+        let tokens = tokenize(query);
+
+        // 2. Create empty SET of doc ids
+        let mut doc_ids = HashSet::new();
+
+        // 3. Loop over tokens - if tokens exist in postings, add all doc ids to set
+        for token in tokens {
+            if let Some(ids) = self.postings.get(&token) {
+                for uuid in ids {
+                    // Deref here otherwise it will try to insert &uuid
+                    // but we want doc ids to contain/return using owned Uuid
+                    doc_ids.insert(*uuid);
+                }
+            }
+        }
+
+        // 4. conovert and return SET as a Vec<Uuid> like the sig expects
+        doc_ids.into_iter().collect()
+    }
 }
 
 #[cfg(test)]

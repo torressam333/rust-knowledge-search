@@ -51,11 +51,11 @@ fn run_search(query: String) {
     let mock_doc = ingestion::Document {
         id: Uuid::new_v4(),
         path: PathBuf::new(),
-        content: "Hi There!".to_string(),
+        content: String::from("Hi there!"),
         modified: Some(SystemTime::now()),
     };
 
     index.add_document(&mock_doc);
 
-    index.search_query(&query); // ->>> doesnt exist implement in index.rs
+    index.search_query(&query);
 }
