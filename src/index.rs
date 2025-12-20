@@ -148,7 +148,33 @@ mod tests {
     }
 
     #[test]
-    fn search_multiple_tokens_returns_union_of_docs() {}
+    fn search_multiple_tokens_returns_union_of_docs() {
+        let query = "believe victory";
+        let mut index = Index::new();
+
+        let doc1 = Document {
+            id: Uuid::new_v4(),
+            path: PathBuf::from("note1.txt"),
+            content: "I believe in hard work".to_string(),
+            modified: None,
+        };
+
+        let doc2 = Document {
+            id: Uuid::new_v4(),
+            path: PathBuf::from("note2.txt"),
+            content: "Victory comes to the prepared".to_string(),
+            modified: None,
+        };
+
+        index.add_document(&doc1);
+        index.add_document(&doc2);
+
+        let results = index.search_query(query);
+
+        assert_eq!(results.len(), 2);
+        assert!(results.contains(&doc1.id));
+        assert!(results.contains(&doc2.id));
+    }
 
     #[test]
     fn search_unknown_token_returns_empty_vec() {}
