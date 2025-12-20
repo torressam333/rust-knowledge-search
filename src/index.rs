@@ -143,7 +143,7 @@ mod tests {
 
         let all_docs_ids = index.search_query(query);
 
-        assert!(all_docs_ids.len() == 1);
+        assert_eq!(all_docs_ids.len(), 1);
         assert!(all_docs_ids.contains(&doc.id));
     }
 
