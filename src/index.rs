@@ -177,7 +177,23 @@ mod tests {
     }
 
     #[test]
-    fn search_unknown_token_returns_empty_vec() {}
+    fn search_unknown_token_returns_empty_vec() {
+        let query = "I will";
+        let mut index = Index::new();
+
+        let doc = Document {
+            id: Uuid::new_v4(),
+            path: PathBuf::from("note.txt"),
+            content: "Sometimes you just want a chicken sandwich, lol".to_string(),
+            modified: None,
+        };
+
+        index.add_document(&doc);
+
+        let all_docs_ids = index.search_query(query);
+
+        assert_eq!(all_docs_ids.len(), 0);
+    }
 
     #[test]
     fn search_does_not_duplicate_document_ids() {}
