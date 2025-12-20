@@ -195,6 +195,25 @@ mod tests {
         assert_eq!(all_docs_ids.len(), 0);
     }
 
+    // Even though multiple tokens match (and one appears multiple times),
+    // the document ID must appear exactly once in results.
     #[test]
-    fn search_does_not_duplicate_document_ids() {}
+    fn search_does_not_duplicate_document_ids() {
+        let query = "Good morning";
+        let mut index = Index::new();
+
+        let doc = Document {
+            id: Uuid::new_v4(),
+            path: PathBuf::from("note.txt"),
+            content: "I just want to say good morning, friends! So, good morning!".to_string(),
+            modified: None,
+        };
+
+        index.add_document(&doc);
+
+        let all_docs_ids = index.search_query(query);
+
+        assert_eq!(all_docs_ids.len(), 1);
+        assert!(all_docs_ids.contains(&doc.id));
+    }
 }
