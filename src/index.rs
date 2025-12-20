@@ -128,7 +128,24 @@ mod tests {
     }
 
     #[test]
-    fn search_single_token_returns_matching_doc() {}
+    fn search_single_token_returns_matching_doc() {
+        let query = "I believe";
+        let mut index = Index::new();
+
+        let doc = Document {
+            id: Uuid::new_v4(),
+            path: PathBuf::from("note.txt"),
+            content: "I believe that we will win because we are champtions at hear".to_string(),
+            modified: None,
+        };
+
+        index.add_document(&doc);
+
+        let all_docs_ids = index.search_query(query);
+
+        assert!(all_docs_ids.len() == 1);
+        assert!(all_docs_ids.contains(&doc.id));
+    }
 
     #[test]
     fn search_multiple_tokens_returns_union_of_docs() {}
