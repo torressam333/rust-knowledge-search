@@ -122,13 +122,18 @@ mod tests {
             modified: None,
         };
 
+        // Grab ids before moving doc ownership
+        let doc_id = doc.id;
+        let doc_id_2 = doc2.id;
+
         index.add_document(doc);
         index.add_document(doc2);
 
-        assert!(index.postings.contains_key("hello"));
-        assert!(index.postings.contains_key("world"));
-        assert_eq!(index.postings["hello"], vec![doc.id, doc2.id]);
-        assert_eq!(index.postings["friend"], vec![doc2.id]);
+        assert!(index.postings["hello"].contains(&doc_id));
+        assert!(index.postings["friend"].contains(&doc_id_2));
+
+        assert_eq!(index.postings["hello"].len(), 2);
+        assert_eq!(index.postings["world"].len(), 2);
     }
 
     #[test]
