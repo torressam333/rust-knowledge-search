@@ -5,7 +5,7 @@ use thiserror::Error;
 use uuid::Uuid;
 
 // TODO: Making fields pub for now...will add getters leter to make more robust.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Document {
     pub id: Uuid,
     pub path: PathBuf,

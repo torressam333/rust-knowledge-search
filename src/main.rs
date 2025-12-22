@@ -55,7 +55,7 @@ fn run_search(query: String) {
         modified: Some(SystemTime::now()),
     };
 
-    index.add_document(&mock_doc);
+    index.add_document(mock_doc);
 
     index.search_query(&query);
 }

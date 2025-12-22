@@ -2,36 +2,48 @@ use crate::ingestion::Document;
 use crate::tokenizer::tokenize;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::path::PathBuf;
 use uuid::Uuid;
 
 pub struct Index {
-    postings: HashMap<String, Vec<Uuid>>,
+    postings: HashMap<String, HashSet<Uuid>>,
+    documents: HashMap<Uuid, Document>,
+    path_to_id: HashMap<PathBuf, Uuid>,
+    doc_tokens: HashMap<Uuid, HashSet<String>>,
 }
 
 impl Index {
     pub fn new() -> Self {
         Index {
             postings: HashMap::new(),
+            documents: HashMap::new(),
+            path_to_id: HashMap::new(),
+            doc_tokens: HashMap::new(),
         }
     }
 
-    pub fn add_document(&mut self, doc: &Document) {
+    pub fn add_document(&mut self, doc: Document) {
+        // 1. Tokenize & dedupe
         let tokens = tokenize(&doc.content);
+        let unique_tokens: HashSet<String> = tokens.into_iter().collect();
 
-        // Prevent dupe doc id's per token
-        let mut unique_tokens = HashSet::new();
+        // 2. Store tokens per document
+        self.doc_tokens.insert(doc.id, unique_tokens.clone());
 
-        for token in tokens {
-            unique_tokens.insert(token);
-        }
-
+        // 3. Update inverted index
         for token in unique_tokens {
             self.postings
                 .entry(token)
-                .or_insert_with(Vec::new)
-                .push(doc.id);
+                .or_insert_with(HashSet::new)
+                .insert(doc.id);
         }
+
+        // 4. Store document & path mapping
+        self.documents.insert(doc.id, doc.clone());
+        self.path_to_id.insert(doc.path.clone(), doc.id);
     }
+
+    pub fn remove_document(doc_id: Uuid) -> () {}
 
     pub fn search_query(&self, query: &str) -> Vec<Uuid> {
         // 1. Tokenize the query
@@ -80,13 +92,16 @@ mod tests {
             modified: None,
         };
 
-        index.add_document(&doc);
+        // Extract what we need before move so we can still assert
+        let doc_id = doc.id;
 
-        assert!(index.postings.contains_key("hello"));
-        assert!(index.postings.contains_key("world"));
+        index.add_document(doc);
 
-        assert_eq!(index.postings["hello"], vec![doc.id]);
-        assert_eq!(index.postings["world"], vec![doc.id]);
+        assert!(index.postings["hello"].contains(&doc_id));
+        assert!(index.postings["world"].contains(&doc_id));
+
+        assert_eq!(index.postings["hello"].len(), 1);
+        assert_eq!(index.postings["world"].len(), 1);
     }
 
     #[test]
@@ -107,8 +122,8 @@ mod tests {
             modified: None,
         };
 
-        index.add_document(&doc);
-        index.add_document(&doc2);
+        index.add_document(doc);
+        index.add_document(doc2);
 
         assert!(index.postings.contains_key("hello"));
         assert!(index.postings.contains_key("world"));
@@ -139,12 +154,13 @@ mod tests {
             modified: None,
         };
 
-        index.add_document(&doc);
+        let doc_id = doc.id;
+        index.add_document(doc);
 
         let all_docs_ids = index.search_query(query);
 
         assert_eq!(all_docs_ids.len(), 1);
-        assert!(all_docs_ids.contains(&doc.id));
+        assert!(all_docs_ids.contains(doc_id));
     }
 
     #[test]
@@ -166,14 +182,16 @@ mod tests {
             modified: None,
         };
 
-        index.add_document(&doc1);
-        index.add_document(&doc2);
+        index.add_document(doc1);
+        index.add_document(doc2);
 
         let results = index.search_query(query);
+        let doc_id = doc1.id;
+        let doc_id_2 = doc2.id;
 
         assert_eq!(results.len(), 2);
-        assert!(results.contains(&doc1.id));
-        assert!(results.contains(&doc2.id));
+        assert!(results.contains(doc_id));
+        assert!(results.contains(doc_id_2));
     }
 
     #[test]
@@ -188,7 +206,7 @@ mod tests {
             modified: None,
         };
 
-        index.add_document(&doc);
+        index.add_document(doc);
 
         let all_docs_ids = index.search_query(query);
 
@@ -209,11 +227,13 @@ mod tests {
             modified: None,
         };
 
-        index.add_document(&doc);
+        let doc_id = doc.id;
+
+        index.add_document(doc);
 
         let all_docs_ids = index.search_query(query);
 
         assert_eq!(all_docs_ids.len(), 1);
-        assert!(all_docs_ids.contains(&doc.id));
+        assert!(all_docs_ids.contains(doc_id));
     }
 }
