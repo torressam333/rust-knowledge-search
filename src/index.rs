@@ -165,7 +165,7 @@ mod tests {
         let all_docs_ids = index.search_query(query);
 
         assert_eq!(all_docs_ids.len(), 1);
-        assert!(all_docs_ids.contains(doc_id));
+        assert!(all_docs_ids.contains(&doc_id));
     }
 
     #[test]
@@ -187,16 +187,17 @@ mod tests {
             modified: None,
         };
 
+        let doc_id = doc1.id;
+        let doc_id_2 = doc2.id;
+
         index.add_document(doc1);
         index.add_document(doc2);
 
         let results = index.search_query(query);
-        let doc_id = doc1.id;
-        let doc_id_2 = doc2.id;
 
         assert_eq!(results.len(), 2);
-        assert!(results.contains(doc_id));
-        assert!(results.contains(doc_id_2));
+        assert!(results.contains(&doc_id));
+        assert!(results.contains(&doc_id_2));
     }
 
     #[test]
@@ -239,6 +240,6 @@ mod tests {
         let all_docs_ids = index.search_query(query);
 
         assert_eq!(all_docs_ids.len(), 1);
-        assert!(all_docs_ids.contains(doc_id));
+        assert!(all_docs_ids.contains(&doc_id));
     }
 }
