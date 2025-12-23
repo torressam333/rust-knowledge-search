@@ -43,7 +43,26 @@ impl Index {
         self.path_to_id.insert(doc.path.clone(), doc.id);
     }
 
-    pub fn remove_document(doc_id: Uuid) -> () {}
+    pub fn remove_document(&mut self, doc_id: Uuid) -> () {
+        let tokens = match self.doc_tokens.get(&doc_id) {
+            Some(tokens) => tokens.clone(),
+            None => return,
+        };
+
+        for token in tokens {
+            // remove doc_id from postings[token]
+            if let Some(doc_ids) = self.postings.get_mut(&token) {
+                doc_ids.remove(&doc_id);
+
+                if doc_ids.is_empty() {
+                    self.postings.remove(&token);
+                }
+            }
+        }
+
+        self.doc_tokens.remove(&doc_id);
+        self.documents.remove(&doc_id);
+    }
 
     pub fn search_query(&self, query: &str) -> Vec<Uuid> {
         // 1. Tokenize the query
