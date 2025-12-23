@@ -261,4 +261,89 @@ mod tests {
         assert_eq!(all_docs_ids.len(), 1);
         assert!(all_docs_ids.contains(&doc_id));
     }
+
+    /** Tests for the remove_document fn */
+    #[test]
+    fn remove_document_removes_doc_from_postings() {
+        // 1. Create a new index
+        let mut index = Index::new();
+
+        // 2. Create two documents that share at least one token
+        let doc = Document {
+            id: Uuid::new_v4(),
+            path: PathBuf::from("note.txt"),
+            content: "I believe that we will win".to_string(),
+            modified: None,
+        };
+
+        let doc2 = Document {
+            id: Uuid::new_v4(),
+            path: PathBuf::from("note.txt"),
+            content: "I believe!".to_string(),
+            modified: None,
+        };
+
+        // 3. Assert the shared token exists and contains both doc IDs
+        let doc1_content = &doc.content;
+        let doc2_content = &doc2.content;
+
+        let doc1_tokens = tokenize(doc1_content);
+        let doc2_tokens = tokenize(doc2_content);
+        let doc1_id = doc.id;
+        let doc2_id = doc2.id;
+
+        // 4. Add both documents to the index
+        index.add_document(doc);
+        index.add_document(doc2);
+
+        // 5. Call remove_document for ONE of the documents
+        index.remove_document(doc1_id);
+
+        // 6. Assert the shared token still exists
+        assert_eq!(doc1_tokens, doc2_tokens);
+
+        // 7. Assert the removed doc ID is gone
+        assert!(!doc1_tokens.contains(&doc1_id.to_string()));
+
+        // 8. Assert the other doc ID is still present
+        assert!(doc2_tokens.contains(&doc2_id.to_string()));
+    }
+
+    #[test]
+    fn remove_document_removes_orphaned_tokens() {
+        // 1. Create a new index
+
+        // 2. Create a document with unique tokens
+
+        // 3. Add the document to the index
+
+        // 4. Assert the token exists in postings
+
+        // 5. Remove the document
+
+        // 6. Assert the token is no longer present in postings
+    }
+
+    #[test]
+    fn remove_document_cleans_up_internal_maps() {
+        // 1. Create a new index
+
+        // 2. Create a document with a path
+
+        // 3. Capture doc_id and path before moving the document
+
+        // 4. Add the document to the index
+
+        // 5. Assert document exists in:
+        //    - documents
+        //    - doc_tokens
+        //    - path_to_id
+
+        // 6. Remove the document
+
+        // 7. Assert document no longer exists in:
+        //    - documents
+        //    - doc_tokens
+        //    - path_to_id
+    }
 }
