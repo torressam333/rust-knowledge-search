@@ -308,16 +308,29 @@ mod tests {
     #[test]
     fn remove_document_removes_orphaned_tokens() {
         // 1. Create a new index
+        let mut index = Index::new();
 
         // 2. Create a document with unique tokens
+        let doc = Document {
+            id: Uuid::new_v4(),
+            path: PathBuf::from("note.txt"),
+            content: "Some unique tokens here".to_string(),
+            modified: None,
+        };
+
+        let doc_id = doc.id;
 
         // 3. Add the document to the index
+        index.add_document(doc);
 
         // 4. Assert the token exists in postings
+        assert!(index.postings.contains_key("unique"));
 
         // 5. Remove the document
+        index.remove_document(doc_id);
 
         // 6. Assert the token is no longer present in postings
+        assert!(!index.postings.contains_key("unique"));
     }
 
     #[test]
