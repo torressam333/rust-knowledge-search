@@ -265,10 +265,8 @@ mod tests {
     /** Tests for the remove_document fn */
     #[test]
     fn remove_document_removes_doc_from_postings() {
-        // 1. Create a new index
         let mut index = Index::new();
 
-        // 2. Create two documents that share at least one token
         let doc = Document {
             id: Uuid::new_v4(),
             path: PathBuf::from("note.txt"),
@@ -283,30 +281,28 @@ mod tests {
             modified: None,
         };
 
-        // 3. Assert the shared token exists and contains both doc IDs
-        let doc1_content = &doc.content;
-        let doc2_content = &doc2.content;
-
-        let doc1_tokens = tokenize(doc1_content);
-        let doc2_tokens = tokenize(doc2_content);
         let doc1_id = doc.id;
         let doc2_id = doc2.id;
 
-        // 4. Add both documents to the index
         index.add_document(doc);
         index.add_document(doc2);
 
-        // 5. Call remove_document for ONE of the documents
         index.remove_document(doc1_id);
 
-        // 6. Assert the shared token still exists
-        assert_eq!(doc1_tokens, doc2_tokens);
+        // Shared token still exists but only contains doc2
+        let postings_for_believe = index.postings.get("believe").unwrap();
+        assert!(!postings_for_believe.contains(&doc1_id));
+        assert!(postings_for_believe.contains(&doc2_id));
 
-        // 7. Assert the removed doc ID is gone
-        assert!(!doc1_tokens.contains(&doc1_id.to_string()));
+        // Tokens unique to removed document are gone
+        assert!(!index.postings.contains_key("that"));
+        assert!(!index.postings.contains_key("we"));
+        assert!(!index.postings.contains_key("will"));
+        assert!(!index.postings.contains_key("win"));
 
-        // 8. Assert the other doc ID is still present
-        assert!(doc2_tokens.contains(&doc2_id.to_string()));
+        // Check documents map
+        assert!(index.documents.get(&doc1_id).is_none());
+        assert!(index.documents.get(&doc2_id).is_some());
     }
 
     #[test]
