@@ -317,20 +317,36 @@ mod tests {
             content: "Some unique tokens here".to_string(),
             modified: None,
         };
-
         let doc_id = doc.id;
 
         // 3. Add the document to the index
         index.add_document(doc);
 
-        // 4. Assert the token exists in postings
-        assert!(index.postings.contains_key("unique"));
+        // 4. Capture all tokens for this document BEFORE removal
+        let tokens_of_doc: Vec<String> = index
+            .doc_tokens
+            .get(&doc_id)
+            .unwrap()
+            .iter()
+            .cloned()
+            .collect();
+
+        // Assert all tokens exist before removal
+        for token in &tokens_of_doc {
+            assert!(index.postings.contains_key(token));
+        }
 
         // 5. Remove the document
         index.remove_document(doc_id);
 
-        // 6. Assert the token is no longer present in postings
-        assert!(!index.postings.contains_key("unique"));
+        // 6. Assert all tokens are no longer present
+        for token in tokens_of_doc {
+            assert!(!index.postings.contains_key(&token));
+        }
+
+        // 7. Assert the document itself is gone
+        assert!(index.documents.get(&doc_id).is_none());
+        assert!(index.doc_tokens.get(&doc_id).is_none());
     }
 
     #[test]
