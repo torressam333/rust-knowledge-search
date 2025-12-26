@@ -44,6 +44,11 @@ impl Index {
     }
 
     pub fn remove_document(&mut self, doc_id: Uuid) -> () {
+        if let Some(doc) = self.documents.get(&doc_id) {
+            let path = doc.path.clone();
+            self.path_to_id.remove(&path);
+        }
+
         let tokens = match self.doc_tokens.get(&doc_id) {
             Some(tokens) => tokens.clone(),
             None => return,
@@ -352,23 +357,40 @@ mod tests {
     #[test]
     fn remove_document_cleans_up_internal_maps() {
         // 1. Create a new index
+        let mut index = Index::new();
 
         // 2. Create a document with a path
+        let doc = Document {
+            id: Uuid::new_v4(),
+            path: PathBuf::from("note.txt"),
+            content: "Some unique tokens here".to_string(),
+            modified: None,
+        };
 
         // 3. Capture doc_id and path before moving the document
+        let doc_id = doc.id;
 
         // 4. Add the document to the index
+        index.add_document(doc);
 
         // 5. Assert document exists in:
         //    - documents
         //    - doc_tokens
         //    - path_to_id
+        let path_buf = PathBuf::from("note.txt");
+        assert!(index.documents.contains_key(&doc_id));
+        assert!(index.doc_tokens.contains_key(&doc_id));
+        assert_eq!(index.path_to_id.get(&path_buf), Some(&doc_id));
 
         // 6. Remove the document
+        index.remove_document(doc_id);
 
         // 7. Assert document no longer exists in:
         //    - documents
         //    - doc_tokens
         //    - path_to_id
+        assert!(!index.documents.contains_key(&doc_id));
+        assert!(!index.doc_tokens.contains_key(&doc_id));
+        assert!(index.path_to_id.get(&path_buf).is_none());
     }
 }
