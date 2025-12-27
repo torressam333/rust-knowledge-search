@@ -30,6 +30,7 @@ pub fn watch_notes(tx: Sender<IndexEvent>) -> NotifyResult<()> {
         };
 
         // 4. Handle each affected path independently
+        // Never assume 1 event = 1 path. Always iterate event.paths
         for path in event.paths {
             // 5. Filter for only files we care about (.txt / .md)
             if !matches!(
@@ -54,5 +55,63 @@ pub fn watch_notes(tx: Sender<IndexEvent>) -> NotifyResult<()> {
     // 8. Keep the watcher alive for the lifetime of the program
     loop {
         std::thread::park();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+    use std::sync::mpsc::channel;
+
+    #[test]
+    fn watcher_sends_created_event_for_txt_file() {
+        // 1. Set up a channel (tx, rx)
+        // 2. Create a watcher callback that uses tx
+        // 3. Simulate a notify::Event of kind Create with a .txt path
+        // 4. Send the event through the watcher callback
+        // 5. Receive the event from rx
+        // 6. Assert that it is IndexEvent::Created
+        // 7. Assert that the path matches
+    }
+
+    #[test]
+    fn watcher_filters_non_txt_md_files() {
+        // 1. Set up a channel
+        // 2. Create watcher callback with tx
+        // 3. Simulate a notify::Event of kind Create with a .jpg or .tmp file
+        // 4. Send the event
+        // 5. Assert that rx receives nothing
+    }
+
+    #[test]
+    fn watcher_handles_multiple_paths_in_one_event() {
+        // 1. Set up a channel
+        // 2. Create watcher callback with tx
+        // 3. Simulate a notify::Event of kind Create with multiple paths
+        //    - some .txt, some .md, some ignored
+        // 4. Send the event
+        // 5. Receive events from rx
+        // 6. Assert that only the valid .txt/.md files were sent
+        // 7. Assert that the event kind is correct for each
+    }
+
+    #[test]
+    fn watcher_gracefully_handles_channel_closed() {
+        // 1. Set up a channel
+        // 2. Drop the receiver immediately
+        // 3. Call the watcher callback with a Create event
+        // 4. Assert that the callback does not panic
+        // 5. Assert that an error message is printed (optional)
+    }
+
+    #[test]
+    fn watcher_translates_modify_and_delete_events() {
+        // 1. Set up a channel
+        // 2. Create watcher callback with tx
+        // 3. Simulate EventKind::Modify and EventKind::Remove with valid files
+        // 4. Send the events
+        // 5. Assert that rx receives IndexEvent::Modified and IndexEvent::Deleted
+        // 6. Assert the paths match
     }
 }
