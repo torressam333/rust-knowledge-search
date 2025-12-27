@@ -60,15 +60,29 @@ pub fn watch_notes(tx: Sender<IndexEvent>) -> NotifyResult<()> {
 
 #[cfg(test)]
 mod tests {
+    use crate::watcher;
+
     use super::*;
+    use notify::{Event, EventKind};
     use std::path::PathBuf;
-    use std::sync::mpsc::channel;
+    use std::sync::mpsc::{self};
 
     #[test]
     fn watcher_sends_created_event_for_txt_file() {
         // 1. Set up a channel (tx, rx)
+        let (tx, rx) = mpsc::channel::<super::IndexEvent>();
+
         // 2. Create a watcher callback that uses tx
-        // 3. Simulate a notify::Event of kind Create with a .txt path
+        let callback_tx = tx.clone();
+        let watcher_callback = move |res: NotifyResult<Event>| {
+            // 3. Simulate a notify::Event of kind Create with a .txt path
+            let simulated_event = Event {
+                kind: EventKind::Create(notify::event::CreateKind::Any),
+                paths: vec![PathBuf::from("note.txt")],
+                attrs: Default::default(),
+            };
+        };
+
         // 4. Send the event through the watcher callback
         // 5. Receive the event from rx
         // 6. Assert that it is IndexEvent::Created
