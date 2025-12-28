@@ -110,40 +110,24 @@ mod tests {
 
     #[test]
     fn watcher_sends_created_event_for_txt_file() {
-        // 1. Set up a channel (tx, rx)
-        let (tx, rx) = mpsc::channel::<super::IndexEvent>();
-
-        // 2. Simulate a notify::Event of kind Create with a .txt path
+        // 1. Simulate a notify::Event of kind Create with a .txt path
         let simulated_event = Event {
             kind: EventKind::Create(notify::event::CreateKind::Any),
             paths: vec![PathBuf::from("note.txt")],
             attrs: Default::default(),
         };
 
-        // 3. simulate the fn that notify will call when fs changes
-        let watcher_callback = move |res: NotifyResult<Event>| {
-            let event = match res {
-                Ok(event) => event,
-                Err(_) => return,
-            };
+        // 2. Call the helper to run the watcher callback
+        let index_events = run_watcher_with_event(simulated_event);
 
-            // One fs event can affect multiple files so we need to loop em all
-            // and send event per file
-            for path in event.paths {
-                let _ = tx.send(super::IndexEvent::Created(path));
-            }
-        };
+        // 3. Assert that exactly one event was sent
+        assert_eq!(index_events.len(), 1);
 
-        // 4. Call the watcher callback with the simulated event
-        watcher_callback(Ok(simulated_event));
-
-        // 5. Receive the event from rx
-        let received_event = rx.recv().expect("Expected an IndexEvent");
-
-        match received_event {
+        // 4. Match on the single IndexEvent
+        match &index_events[0] {
             IndexEvent::Created(path) => {
-                // 7. Assert that the path matches
-                assert_eq!(path, PathBuf::from("note.txt"));
+                // 5. Assert that the path matches
+                assert_eq!(path, &PathBuf::from("note.txt"));
             }
             _ => panic!("Expected Created event"),
         }
