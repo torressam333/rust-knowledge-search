@@ -63,30 +63,50 @@ mod tests {
     use crate::watcher;
 
     use super::*;
+    use clap::builder::OsStr;
     use notify::{Event, EventKind};
     use std::path::PathBuf;
-    use std::sync::mpsc::{self};
+    use std::sync::mpsc::{self, Receiver};
 
     #[test]
     fn watcher_sends_created_event_for_txt_file() {
         // 1. Set up a channel (tx, rx)
         let (tx, rx) = mpsc::channel::<super::IndexEvent>();
 
-        // 2. Create a watcher callback that uses tx
-        let callback_tx = tx.clone();
-        let watcher_callback = move |res: NotifyResult<Event>| {
-            // 3. Simulate a notify::Event of kind Create with a .txt path
-            let simulated_event = Event {
-                kind: EventKind::Create(notify::event::CreateKind::Any),
-                paths: vec![PathBuf::from("note.txt")],
-                attrs: Default::default(),
-            };
+        // 2. Simulate a notify::Event of kind Create with a .txt path
+        let simulated_event = Event {
+            kind: EventKind::Create(notify::event::CreateKind::Any),
+            paths: vec![PathBuf::from("note.txt")],
+            attrs: Default::default(),
         };
 
-        // 4. Send the event through the watcher callback
+        // 3. simulate the fn that notify will call when fs changes
+        let watcher_callback = move |res: NotifyResult<Event>| {
+            let event = match res {
+                Ok(event) => event,
+                Err(_) => return,
+            };
+
+            // One fs event can affect multiple files so we need to loop em all
+            // and send event per file
+            for path in event.paths {
+                let _ = tx.send(super::IndexEvent::Created(path));
+            }
+        };
+
+        // 4. Call the watcher callback with the simulated event
+        watcher_callback(Ok(simulated_event));
+
         // 5. Receive the event from rx
-        // 6. Assert that it is IndexEvent::Created
-        // 7. Assert that the path matches
+        let received_event = rx.recv().expect("Expected an IndexEvent");
+
+        match received_event {
+            IndexEvent::Created(path) => {
+                // 7. Assert that the path matches
+                assert_eq!(path, PathBuf::from("note.txt"));
+            }
+            _ => panic!("Expected Created event"),
+        }
     }
 
     #[test]
