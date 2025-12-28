@@ -68,6 +68,46 @@ mod tests {
     use std::path::PathBuf;
     use std::sync::mpsc::{self, Receiver};
 
+    fn run_watcher_with_event(passed_event: notify::Event) -> Vec<super::IndexEvent> {
+        // 1. Create channel
+        let (tx, rx) = mpsc::channel::<super::IndexEvent>();
+
+        // 2. Build watcher callback
+        let watcher_callback = move |res: NotifyResult<Event>| {
+            let event = match res {
+                Ok(event) => event,
+                Err(_) => return,
+            };
+
+            // 3. Translate notify OS level event kinds into domain events
+            let make_index_event = match event.kind {
+                notify::EventKind::Create(_) => IndexEvent::Created,
+                notify::EventKind::Modify(_) => IndexEvent::Modified,
+                notify::EventKind::Remove(_) => IndexEvent::Deleted,
+                _ => return, // Ignore unrelated filesystem noise
+            };
+
+            // One fs event can affect multiple files so we need to loop em all
+            // and send event per file
+            for path in event.paths {
+                let _ = tx.send(make_index_event(path));
+            }
+        };
+
+        // 3. Call callback with Ok(event)
+        watcher_callback(Ok(passed_event));
+
+        // 4. Drain rx and return collected IndexEvents
+        let mut rec_txs = Vec::new();
+
+        // Keep trying to receive until the channel is empty
+        while let Ok(rec) = rx.try_recv() {
+            rec_txs.push(rec);
+        }
+
+        rec_txs
+    }
+
     #[test]
     fn watcher_sends_created_event_for_txt_file() {
         // 1. Set up a channel (tx, rx)
