@@ -205,11 +205,40 @@ mod tests {
 
     #[test]
     fn watcher_translates_modify_and_delete_events() {
-        // 1. Set up a channel
-        // 2. Create watcher callback with tx
-        // 3. Simulate EventKind::Modify and EventKind::Remove with valid files
-        // 4. Send the events
-        // 5. Assert that rx receives IndexEvent::Modified and IndexEvent::Deleted
-        // 6. Assert the paths match
+        // --- MODIFY ---
+        let modify_event = Event {
+            kind: EventKind::Modify(notify::event::ModifyKind::Any),
+            paths: vec![PathBuf::from("note.txt")],
+            attrs: Default::default(),
+        };
+
+        let modify_results = run_watcher_with_event(modify_event);
+
+        assert_eq!(modify_results.len(), 1);
+
+        match &modify_results[0] {
+            IndexEvent::Modified(path) => {
+                assert_eq!(path, &PathBuf::from("note.txt"));
+            }
+            _ => panic!("Expected Modified event"),
+        }
+
+        // --- DELETE ---
+        let delete_event = Event {
+            kind: EventKind::Remove(notify::event::RemoveKind::Any),
+            paths: vec![PathBuf::from("old_note.md")],
+            attrs: Default::default(),
+        };
+
+        let delete_results = run_watcher_with_event(delete_event);
+
+        assert_eq!(delete_results.len(), 1);
+
+        match &delete_results[0] {
+            IndexEvent::Deleted(path) => {
+                assert_eq!(path, &PathBuf::from("old_note.md"));
+            }
+            _ => panic!("Expected Deleted event"),
+        }
     }
 }
