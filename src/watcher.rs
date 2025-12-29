@@ -97,6 +97,7 @@ mod tests {
                 ) {
                     continue;
                 }
+
                 let _ = tx.send(make_index_event(path));
             }
         };
@@ -122,7 +123,6 @@ mod tests {
             kind: EventKind::Create(notify::event::CreateKind::Any),
             paths: vec![
                 PathBuf::from("note.txt"),
-                PathBuf::from("notes.md"),
                 PathBuf::from("should_be_ignored.jpg"),
             ],
             attrs: Default::default(),
@@ -131,8 +131,8 @@ mod tests {
         // 2. Call the helper to run the watcher callback
         let index_events = run_watcher_with_event(simulated_event);
 
-        // 3. Assert that 2 events were sent - 1 per valid ext
-        assert_eq!(index_events.len(), 2);
+        // 3. Assert that 1 events were sent - 1 per valid ext
+        assert_eq!(index_events.len(), 1);
 
         // Match on multiple files since 1 event can change multiple
         let paths: Vec<_> = index_events
@@ -144,16 +144,25 @@ mod tests {
             .collect();
 
         assert!(paths.contains(&PathBuf::from("note.txt")));
-        assert!(paths.contains(&PathBuf::from("notes.md")));
     }
 
     #[test]
     fn watcher_filters_non_txt_md_files() {
-        // 1. Set up a channel
-        // 2. Create watcher callback with tx
-        // 3. Simulate a notify::Event of kind Create with a .jpg or .tmp file
-        // 4. Send the event
-        // 5. Assert that rx receives nothing
+        // 1. Simulate a notify::Event of kind Create with a .txt path
+        let simulated_event = Event {
+            kind: EventKind::Create(notify::event::CreateKind::Any),
+            paths: vec![
+                PathBuf::from("notes.md"),
+                PathBuf::from("should_be_ignored.jpg"),
+            ],
+            attrs: Default::default(),
+        };
+
+        // 2. Call the helper to run the watcher callback
+        let index_events = run_watcher_with_event(simulated_event);
+
+        // 3. Assert that 1 events was sent (only for md ext)
+        assert_eq!(index_events.len(), 1);
     }
 
     #[test]
