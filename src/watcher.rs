@@ -60,13 +60,10 @@ pub fn watch_notes(tx: Sender<IndexEvent>) -> NotifyResult<()> {
 
 #[cfg(test)]
 mod tests {
-    use crate::watcher;
-
     use super::*;
-    use clap::builder::OsStr;
     use notify::{Event, EventKind};
     use std::path::PathBuf;
-    use std::sync::mpsc::{self, Receiver};
+    use std::sync::mpsc::{self};
 
     fn run_watcher_with_event(passed_event: notify::Event) -> Vec<super::IndexEvent> {
         // 1. Create channel
@@ -166,24 +163,44 @@ mod tests {
     }
 
     #[test]
-    fn watcher_handles_multiple_paths_in_one_event() {
-        // 1. Set up a channel
-        // 2. Create watcher callback with tx
-        // 3. Simulate a notify::Event of kind Create with multiple paths
-        //    - some .txt, some .md, some ignored
-        // 4. Send the event
-        // 5. Receive events from rx
-        // 6. Assert that only the valid .txt/.md files were sent
-        // 7. Assert that the event kind is correct for each
-    }
-
-    #[test]
     fn watcher_gracefully_handles_channel_closed() {
         // 1. Set up a channel
+        let (tx, rx) = mpsc::channel::<IndexEvent>();
+
         // 2. Drop the receiver immediately
+        drop(rx);
+
         // 3. Call the watcher callback with a Create event
-        // 4. Assert that the callback does not panic
-        // 5. Assert that an error message is printed (optional)
+        let watcher_callback = move |res: NotifyResult<Event>| {
+            let event = match res {
+                Ok(event) => event,
+                Err(_) => return,
+            };
+
+            let make_index_event = match event.kind {
+                EventKind::Create(_) => IndexEvent::Created,
+                _ => return,
+            };
+
+            for path in event.paths {
+                // This send will FAIL because rx was dropped
+                if tx.send(make_index_event(path)).is_err() {
+                    // Graceful exit -> what will be asserted for
+                    return;
+                }
+            }
+        };
+
+        // 4. Simulate sys level event
+        // 4. Simulate a filesystem event
+        let simulated_event = Event {
+            kind: EventKind::Create(notify::event::CreateKind::Any),
+            paths: vec![PathBuf::from("note.txt")],
+            attrs: Default::default(),
+        };
+
+        // 5. Assert: calling the callback does NOT panic (no assertion needed)
+        watcher_callback(Ok(simulated_event));
     }
 
     #[test]
