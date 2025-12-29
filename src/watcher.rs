@@ -90,6 +90,13 @@ mod tests {
             // One fs event can affect multiple files so we need to loop em all
             // and send event per file
             for path in event.paths {
+                // Filter for only txt or md
+                if !matches!(
+                    path.extension().and_then(|e| e.to_str()),
+                    Some("txt" | "md")
+                ) {
+                    continue;
+                }
                 let _ = tx.send(make_index_event(path));
             }
         };
@@ -113,24 +120,31 @@ mod tests {
         // 1. Simulate a notify::Event of kind Create with a .txt path
         let simulated_event = Event {
             kind: EventKind::Create(notify::event::CreateKind::Any),
-            paths: vec![PathBuf::from("note.txt")],
+            paths: vec![
+                PathBuf::from("note.txt"),
+                PathBuf::from("notes.md"),
+                PathBuf::from("should_be_ignored.jpg"),
+            ],
             attrs: Default::default(),
         };
 
         // 2. Call the helper to run the watcher callback
         let index_events = run_watcher_with_event(simulated_event);
 
-        // 3. Assert that exactly one event was sent
-        assert_eq!(index_events.len(), 1);
+        // 3. Assert that 2 events were sent - 1 per valid ext
+        assert_eq!(index_events.len(), 2);
 
-        // 4. Match on the single IndexEvent
-        match &index_events[0] {
-            IndexEvent::Created(path) => {
-                // 5. Assert that the path matches
-                assert_eq!(path, &PathBuf::from("note.txt"));
-            }
-            _ => panic!("Expected Created event"),
-        }
+        // Match on multiple files since 1 event can change multiple
+        let paths: Vec<_> = index_events
+            .iter()
+            .map(|e| match e {
+                IndexEvent::Created(p) => p.clone(),
+                _ => panic!("Expected Created event"),
+            })
+            .collect();
+
+        assert!(paths.contains(&PathBuf::from("note.txt")));
+        assert!(paths.contains(&PathBuf::from("notes.md")));
     }
 
     #[test]
