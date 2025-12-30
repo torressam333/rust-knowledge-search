@@ -80,28 +80,21 @@ fn create_watcher_channel(shared_index: Arc<Mutex<Index>>) {
                 Ok(event) => {
                     let mut index = index_clone.lock().unwrap();
                     match event {
-                        IndexEvent::Created(path) => {
-                            println!("Would add document at {:?}", path);
-                            // Read file at path
-                            let contents = fs::read_to_string(&path)
-                                .expect("Should have been able to read the file");
+                        IndexEvent::Created(path) | IndexEvent::Modified(path) => {
+                            if let Ok(contents) = fs::read_to_string(&path) {
+                                let doc = Document {
+                                    id: Uuid::new_v4(),
+                                    path,
+                                    content: contents,
+                                    modified: Some(SystemTime::now()),
+                                };
 
-                            // Create document
-                            let document = Document {
-                                id: Uuid::new_v4(),
-                                path: path,
-                                content: contents,
-                                modified: Some(SystemTime::now()),
-                            };
+                                index.upsert_document(doc);
+                            }
+                        }
 
-                            // Add to shared index
-                            index.add_document(document);
-                        }
-                        IndexEvent::Modified(path) => {
-                            println!("Would modify document at {:?}", path);
-                        }
                         IndexEvent::Deleted(path) => {
-                            println!("Would delete document at {:?}", path);
+                            index.remove_document_by_path(&path);
                         }
                     }
                 }
