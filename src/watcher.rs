@@ -2,6 +2,7 @@ use notify::{Event, RecursiveMode, Result as NotifyResult, Watcher};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::Sender;
 
+#[derive(Debug)]
 pub enum IndexEvent {
     Created(PathBuf),
     Modified(PathBuf),

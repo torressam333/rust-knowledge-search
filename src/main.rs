@@ -3,11 +3,18 @@ mod ingestion;
 mod search;
 mod tokenizer;
 mod watcher;
-use clap::{Parser, Subcommand};
-use std::{path::PathBuf, time::SystemTime};
-use uuid::Uuid;
-
+use crate::index::Index;
+use crate::ingestion::Document;
 use crate::tokenizer::tokenize;
+use crate::watcher::IndexEvent;
+use clap::{Parser, Subcommand};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    sync::{Arc, Mutex, mpsc},
+    time::SystemTime,
+};
+use uuid::Uuid;
 
 #[derive(Parser, Debug)]
 #[command(name = "rust-search")]
@@ -29,33 +36,77 @@ enum Commands {
 }
 
 fn main() {
-    // Parse command-line arguments into Cli struct
     let cli = Cli::parse();
 
+    // Step 1: create shared index
+    let shared_index = Arc::new(Mutex::new(Index::new()));
+
+    // Step 2: start watcher
+    let _watcher_channel = create_watcher_channel(Arc::clone(&shared_index));
+
+    // Step 3: handle CLI commands
     match cli.command {
         Commands::Search { query } => {
-            run_search(query);
+            run_search(query, Arc::clone(&shared_index));
         }
     }
 }
 
-fn run_search(query: String) {
+fn run_search(query: String, shared_index: Arc<Mutex<Index>>) {
     let tokens = tokenize(&query);
-
     println!("tokens from query ={:#?}", tokens);
 
-    // Create new index
-    let mut index = index::Index::new();
+    // Lock index for reading
+    let index = shared_index.lock().unwrap();
 
-    // mock doc for now
-    let mock_doc = ingestion::Document {
-        id: Uuid::new_v4(),
-        path: PathBuf::new(),
-        content: String::from("Hi there!"),
-        modified: Some(SystemTime::now()),
-    };
+    let results = index.search_query(&query);
+    println!("Found {} results", results.len());
+}
 
-    index.add_document(mock_doc);
+fn create_watcher_channel(shared_index: Arc<Mutex<Index>>) {
+    let (tx, rx) = std::sync::mpsc::channel::<IndexEvent>();
 
-    index.search_query(&query);
+    let index_clone = Arc::clone(&shared_index);
+
+    // rx gets moved to be owned by the thread...fyi
+    std::thread::spawn(move || {
+        if let Err(e) = watcher::watch_notes(tx) {
+            eprintln!("Watcher error: {:?}", e);
+        }
+
+        // Loop to receive events and update the index
+        loop {
+            match rx.recv() {
+                Ok(event) => {
+                    let mut index = index_clone.lock().unwrap();
+                    match event {
+                        IndexEvent::Created(path) => {
+                            println!("Would add document at {:?}", path);
+                            // Read file at path
+                            let contents = fs::read_to_string(&path)
+                                .expect("Should have been able to read the file");
+
+                            // Create document
+                            let document = Document {
+                                id: Uuid::new_v4(),
+                                path: path,
+                                content: contents,
+                                modified: Some(SystemTime::now()),
+                            };
+
+                            // Add to shared index
+                            index.add_document(document);
+                        }
+                        IndexEvent::Modified(path) => {
+                            println!("Would modify document at {:?}", path);
+                        }
+                        IndexEvent::Deleted(path) => {
+                            println!("Would delete document at {:?}", path);
+                        }
+                    }
+                }
+                Err(_) => break,
+            }
+        }
+    });
 }
