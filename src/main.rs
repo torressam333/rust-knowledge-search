@@ -92,7 +92,6 @@ fn create_watcher_channel(shared_index: Arc<Mutex<Index>>) {
                                 index.upsert_document(doc);
                             }
                         }
-
                         IndexEvent::Deleted(path) => {
                             index.remove_document_by_path(&path);
                         }

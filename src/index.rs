@@ -408,4 +408,30 @@ mod tests {
         assert!(!index.doc_tokens.contains_key(&doc_id));
         assert!(index.path_to_id.get(&path_buf).is_none());
     }
+
+    #[test]
+    fn upsert_replaces_existing_document_for_same_path() {
+        let mut index = Index::new();
+        let path = PathBuf::from("note.txt");
+
+        let doc1 = Document {
+            id: Uuid::new_v4(),
+            path: path.clone(),
+            content: "hello world".to_string(),
+            modified: None,
+        };
+
+        let doc2 = Document {
+            id: Uuid::new_v4(),
+            path: path.clone(),
+            content: "goodbye world".to_string(),
+            modified: None,
+        };
+
+        index.upsert_document(doc1);
+        index.upsert_document(doc2);
+
+        let results = index.search_query("goodbye");
+        assert_eq!(results.len(), 1);
+    }
 }
