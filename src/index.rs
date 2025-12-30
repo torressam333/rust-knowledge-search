@@ -96,6 +96,15 @@ impl Index {
             self.remove_document(doc_id);
         }
     }
+
+    pub fn upsert_document(&mut self, doc: Document) {
+        // If a document already exists for this path, remove it first
+        if let Some(existing_id) = self.path_to_id.get(&doc.path).copied() {
+            self.remove_document(existing_id);
+        }
+
+        self.add_document(doc);
+    }
 }
 
 #[cfg(test)]
