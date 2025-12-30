@@ -90,6 +90,12 @@ impl Index {
         // 4. conovert and return SET as a Vec<Uuid> like the sig expects
         doc_ids.into_iter().collect()
     }
+
+    pub fn remove_document_by_path(&mut self, path: &PathBuf) {
+        if let Some(doc_id) = self.path_to_id.get(path).copied() {
+            self.remove_document(doc_id);
+        }
+    }
 }
 
 #[cfg(test)]
