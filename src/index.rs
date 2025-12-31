@@ -13,7 +13,7 @@ use uuid::Uuid;
 pub struct Index {
     postings: HashMap<String, HashSet<Uuid>>,
     documents: HashMap<Uuid, Document>,
-    path_to_id: HashMap<PathBuf, Uuid>,
+    pub path_to_id: HashMap<PathBuf, Uuid>,
     doc_tokens: HashMap<Uuid, HashSet<String>>,
 }
 

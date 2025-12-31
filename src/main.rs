@@ -86,8 +86,16 @@ fn create_watcher_channel(shared_index: Arc<Mutex<Index>>) {
                     match event {
                         IndexEvent::Created(path) | IndexEvent::Modified(path) => {
                             if let Ok(contents) = fs::read_to_string(&path) {
+                                // Reuse same doc id to prevent dupes or create new if not existent
+                                let doc_id = if let Some(existing_id) = index.path_to_id.get(&path)
+                                {
+                                    *existing_id
+                                } else {
+                                    Uuid::new_v4()
+                                };
+
                                 let doc = Document {
-                                    id: Uuid::new_v4(),
+                                    id: doc_id,
                                     path,
                                     content: contents,
                                     modified: Some(SystemTime::now()),
