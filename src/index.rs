@@ -120,6 +120,7 @@ impl Index {
         Ok(())
     }
 
+    // Returns fully constructed Index (Self) OR an IO error
     pub fn load_from_disk<P: AsRef<Path>>(path: P) -> io::Result<Self> {
         let json = fs::read_to_string(path)?;
         let index = serde_json::from_str(&json).expect("Index should deserialize");

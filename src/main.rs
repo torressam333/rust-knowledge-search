@@ -10,8 +10,7 @@ use crate::watcher::IndexEvent;
 use clap::{Parser, Subcommand};
 use std::{
     fs,
-    path::{Path, PathBuf},
-    sync::{Arc, Mutex, mpsc},
+    sync::{Arc, Mutex},
     time::SystemTime,
 };
 use uuid::Uuid;
@@ -35,16 +34,21 @@ enum Commands {
     },
 }
 
+const INDEX_PATH: &str = "index.json";
+
 fn main() {
     let cli = Cli::parse();
 
-    // Step 1: create shared index
-    let shared_index = Arc::new(Mutex::new(Index::new()));
+    // Load index if exists else create as new
+    let index = Index::load_from_disk(INDEX_PATH).unwrap_or_else(|_| Index::new());
 
-    // Step 2: start watcher
+    // create shared index
+    let shared_index = Arc::new(Mutex::new(index));
+
+    // start watcher
     let _watcher_channel = create_watcher_channel(Arc::clone(&shared_index));
 
-    // Step 3: handle CLI commands
+    // handle CLI commands
     match cli.command {
         Commands::Search { query } => {
             run_search(query, Arc::clone(&shared_index));
@@ -90,10 +94,20 @@ fn create_watcher_channel(shared_index: Arc<Mutex<Index>>) {
                                 };
 
                                 index.upsert_document(doc);
+
+                                // Crash on failure b/c disk write failure is serious
+                                index
+                                    .save_to_disk(INDEX_PATH)
+                                    .expect("Failed to persist index");
                             }
                         }
                         IndexEvent::Deleted(path) => {
                             index.remove_document_by_path(&path);
+
+                            // Crash on failure b/c disk write failure is serious
+                            index
+                                .save_to_disk(INDEX_PATH)
+                                .expect("Failed to persist index");
                         }
                     }
                 }
