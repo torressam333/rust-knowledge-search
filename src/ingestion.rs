@@ -5,7 +5,7 @@ use thiserror::Error;
 use uuid::Uuid;
 
 // TODO: Making fields pub for now...will add getters leter to make more robust.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct Document {
     pub id: Uuid,
     pub path: PathBuf,

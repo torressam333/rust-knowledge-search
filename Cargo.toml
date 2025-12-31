@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-uuid = { version = "1", features = ["v4"] }
+uuid = { version = "1", features = ["v4", "serde"] }
 thiserror = "2.0.17"
 clap = { version = "4.5.3", features = ["derive"] }
 notify = "8.2.0"

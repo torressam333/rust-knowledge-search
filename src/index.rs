@@ -1,10 +1,12 @@
 use crate::ingestion::Document;
 use crate::tokenizer::tokenize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::PathBuf;
 use uuid::Uuid;
 
+#[derive(Serialize, Deserialize)]
 pub struct Index {
     postings: HashMap<String, HashSet<Uuid>>,
     documents: HashMap<Uuid, Document>,
