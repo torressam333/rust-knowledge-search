@@ -3,6 +3,9 @@ use crate::tokenizer::tokenize;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fs;
+use std::io;
+use std::path::Path;
 use std::path::PathBuf;
 use uuid::Uuid;
 
@@ -107,6 +110,17 @@ impl Index {
 
         self.add_document(doc);
     }
+
+    pub fn save_to_disk<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
+        // Walk entire index and convert to json
+        let json = serde_json::to_string_pretty(self).expect("Index shouold serialize");
+
+        // write file and handle Result
+        fs::write(path, json)?;
+        Ok(())
+    }
+
+    pub fn load_from_disk<P: AsRef<Path>>(&self, path: P) -> io::Result<Self> {}
 }
 
 #[cfg(test)]
