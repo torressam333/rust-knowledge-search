@@ -10,7 +10,7 @@ use crate::watcher::IndexEvent;
 use clap::{Parser, Subcommand};
 use std::{
     fs,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, mpsc::Receiver},
     time::SystemTime,
 };
 use uuid::Uuid;
@@ -41,11 +41,14 @@ fn main() {
     // Load index if exists else create as new
     let index = Index::load_from_disk(INDEX_PATH).unwrap_or_else(|_| Index::new());
 
-    // create shared index
+    // create shared index - shared across threads...neat :D
     let shared_index = Arc::new(Mutex::new(index));
 
+    // DOnt care about message just the event
+    let (shutdown_tx, shutdown_rx) = std::sync::mpsc::channel::<()>();
+
     // start watcher
-    let _watcher_channel = create_watcher_channel(Arc::clone(&shared_index));
+    let _watcher_channel = create_watcher_channel(Arc::clone(&shared_index), shutdown_rx);
 
     // handle CLI commands
     match cli.command {
@@ -66,7 +69,7 @@ fn run_search(query: String, shared_index: Arc<Mutex<Index>>) {
     println!("Found {} results", results.len());
 }
 
-fn create_watcher_channel(shared_index: Arc<Mutex<Index>>) {
+fn create_watcher_channel(shared_index: Arc<Mutex<Index>>, shutdown_rx: Receiver<()>) {
     let (tx, rx) = std::sync::mpsc::channel::<IndexEvent>();
 
     let index_clone = Arc::clone(&shared_index);
@@ -76,6 +79,12 @@ fn create_watcher_channel(shared_index: Arc<Mutex<Index>>) {
         if let Err(e) = watcher::watch_notes(tx) {
             eprintln!("Watcher error: {:?}", e);
         }
+
+        // Signal to watcher to exit cleanly
+        match shutdown_rx.try_recv() {
+            Ok(_) => return,
+            Err(_) => {}
+        };
 
         // Loop to receive events and update the index
         loop {
