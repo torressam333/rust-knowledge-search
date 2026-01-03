@@ -80,14 +80,14 @@ fn create_watcher_channel(shared_index: Arc<Mutex<Index>>, shutdown_rx: Receiver
             eprintln!("Watcher error: {:?}", e);
         }
 
-        // Signal to watcher to exit cleanly
-        match shutdown_rx.try_recv() {
-            Ok(_) => return,
-            Err(_) => {}
-        };
-
         // Loop to receive events and update the index
         loop {
+            // Signal to watcher to exit cleanly
+            match shutdown_rx.try_recv() {
+                Ok(_) => return,
+                Err(_) => {}
+            };
+
             match rx.recv() {
                 Ok(event) => {
                     let mut index = index_clone.lock().unwrap();
