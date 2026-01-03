@@ -27,7 +27,6 @@ struct Cli {
 // All supported subcommands
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// Search documents by query string
     Search {
         /// The search query
         query: String,

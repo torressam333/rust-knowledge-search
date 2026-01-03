@@ -134,7 +134,6 @@ mod tests {
     use super::*;
     use crate::ingestion::Document;
     use std::path::PathBuf;
-    use std::time::SystemTime;
 
     #[test]
     fn new_index_is_empty() {
