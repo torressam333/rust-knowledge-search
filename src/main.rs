@@ -93,29 +93,33 @@ fn create_watcher_channel(shared_index: Arc<Mutex<Index>>, shutdown_rx: Receiver
                     let mut index = index_clone.lock().unwrap();
                     match event {
                         IndexEvent::Created(path) | IndexEvent::Modified(path) => {
-                            if let Ok(contents) = fs::read_to_string(&path) {
-                                // Reuse same doc id to prevent dupes or create new if not existent
-                                let doc_id = if let Some(existing_id) = index.path_to_id.get(&path)
-                                {
-                                    *existing_id
-                                } else {
-                                    Uuid::new_v4()
-                                };
+                            // if let Err(e) = fs::read_to_string(&path) {
+                            //     eprintln!("Unable to create or update the index: {:#?}", e);
+                            // }
 
-                                let doc = Document {
-                                    id: doc_id,
-                                    path,
-                                    content: contents,
-                                    modified: Some(SystemTime::now()),
-                                };
+                            // if let Ok(contents) = fs::read_to_string(&path) {
+                            //     // Reuse same doc id to prevent dupes or create new if not existent
+                            //     let doc_id = if let Some(existing_id) = index.path_to_id.get(&path)
+                            //     {
+                            //         *existing_id
+                            //     } else {
+                            //         Uuid::new_v4()
+                            //     };
 
-                                index.upsert_document(doc);
+                            //     let doc = Document {
+                            //         id: doc_id,
+                            //         path,
+                            //         content: contents,
+                            //         modified: Some(SystemTime::now()),
+                            //     };
 
-                                // Crash on failure b/c disk write failure is serious
-                                index
-                                    .save_to_disk(INDEX_PATH)
-                                    .expect("Failed to persist index");
-                            }
+                            //     index.upsert_document(doc);
+
+                            //     // Crash on failure b/c disk write failure is serious
+                            //     index
+                            //         .save_to_disk(INDEX_PATH)
+                            //         .expect("Failed to persist index");
+                            // }
                         }
                         IndexEvent::Deleted(path) => {
                             index.remove_document_by_path(&path);
