@@ -80,60 +80,89 @@ fn create_watcher_channel(shared_index: Arc<Mutex<Index>>, shutdown_rx: Receiver
             eprintln!("Watcher error: {:?}", e);
         }
 
-        // Loop to receive events and update the index
         loop {
-            // Signal to watcher to exit cleanly
+            // ----------------------------------------
+            // Check for shutdown signal before doing anything
+            // ----------------------------------------
             match shutdown_rx.try_recv() {
-                Ok(_) => return,
-                Err(_) => {}
+                Ok(_) => {
+                    println!("Shutdown signal received, exiting watcher thread.");
+                    return; // exit the thread cleanly
+                }
+                Err(_) => {
+                    // No signal, continue processing
+                }
+            }
+
+            // ----------------------------------------
+            // Wait for a filesystem event
+            // ----------------------------------------
+            let event = match rx.recv() {
+                Ok(ev) => ev,
+                Err(_) => {
+                    println!("Watcher channel closed, exiting watcher thread.");
+                    break;
+                }
             };
 
-            match rx.recv() {
-                Ok(event) => {
-                    let mut index = index_clone.lock().unwrap();
-                    match event {
-                        IndexEvent::Created(path) | IndexEvent::Modified(path) => {
-                            match fs::read_to_string(&path) {
-                                Ok(contents) => {
-                                    // Reuse same doc id to prevent dupes or create new if not existent
-                                    let doc_id =
-                                        if let Some(existing_id) = index.path_to_id.get(&path) {
-                                            *existing_id
-                                        } else {
-                                            Uuid::new_v4()
-                                        };
-                                    // Build Document
-                                    let doc = Document {
-                                        id: doc_id,
-                                        path,
-                                        content: contents,
-                                        modified: Some(SystemTime::now()),
-                                    };
-
-                                    // Upsert into index
-                                    index.upsert_document(doc);
-
-                                    // Save index (preferably without panic)
-                                    index
-                                        .save_to_disk(INDEX_PATH)
-                                        .expect("Failed to persist index");
-                                }
-                                Err(e) => {
-                                    eprintln!("Unable to create or update the index: {:#?}", e);
-                                }
-                            }
-                        }
-                        IndexEvent::Deleted(path) => {
-                            index.remove_document_by_path(&path);
-
-                            // Crash on failure b/c disk write failure is serious
-                            index
-                                .save_to_disk(INDEX_PATH)
-                                .expect("Failed to persist index");
+            // ----------------------------------------
+            // Handle file reading outside of lock
+            //    - Since Reading a file doesn't require access to shared Index
+            // ----------------------------------------
+            let doc_opt = match event {
+                IndexEvent::Created(ref path) | IndexEvent::Modified(ref path) => {
+                    match fs::read_to_string(path) {
+                        Ok(contents) => Some((path.clone(), contents, SystemTime::now())),
+                        Err(e) => {
+                            eprintln!("Failed to read file {:?}: {:#?}", path, e);
+                            None
                         }
                     }
                 }
-                Err(_) => break,
+                IndexEvent::Deleted(_) => None, // deletion does not need file contents
+            };
+
+            // ----------------------------------------
+            // ock the index ONLY when we need to mutate it
+            // ----------------------------------------
+            {
+                let mut index = index_clone.lock().unwrap(); // lock begins
+
+                match event {
+                    IndexEvent::Created(_) | IndexEvent::Modified(_) => {
+                        if let Some((path, contents, timestamp)) = doc_opt {
+                            // Check if the document already exists
+                            let doc_id = if let Some(existing_id) = index.path_to_id.get(&path) {
+                                *existing_id
+                            } else {
+                                Uuid::new_v4()
+                            };
+
+                            // Build the Document struct
+                            let doc = Document {
+                                id: doc_id,
+                                path,
+                                content: contents,
+                                modified: Some(timestamp),
+                            };
+
+                            // Insert or update the document in the index
+                            index.upsert_document(doc);
+                        }
+                    }
+                    IndexEvent::Deleted(ref path) => {
+                        // Remove document by path
+                        index.remove_document_by_path(path);
+                    }
+                }
+            } // lock ends here
+
+            // ----------------------------------------
+            // Save the index to disk
+            //    - We take a brief lock to get the snapshot, then release
+            // ----------------------------------------
+            if let Err(e) = shared_index.lock().unwrap().save_to_disk(INDEX_PATH) {
+                eprintln!("Failed to persist index to disk: {:#?}", e);
             }
         }
     });

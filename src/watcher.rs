@@ -22,7 +22,7 @@ pub fn watch_notes(tx: Sender<IndexEvent>) -> NotifyResult<()> {
             }
         };
 
-        // 3. Translate notify OS level event kinds into domain events
+        // Map OS level events to one of my custom IndexEvent
         let make_index_event = match event.kind {
             notify::EventKind::Create(_) => IndexEvent::Created,
             notify::EventKind::Modify(_) => IndexEvent::Modified,
